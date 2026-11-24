@@ -172,7 +172,7 @@ async def start_test(message: types.Message, state: FSMContext):
     await state.update_data(current_q_index=0, score=0)
     await ask_question(message, state, 0)
 
-# КОМНАДА АДМИНА (ПОКАЗ ВСЕХ ПАЦАНЧИКОВ) ЙОУ!
+# КОМНАДА АДМИНА - вывод таблицы лидеров
 @dp.message(Command("show_leaderstats"))
 async def show_leaderstats(message: types.Message):
     user_id: int = message.from_user.id
@@ -195,6 +195,27 @@ async def show_leaderstats(message: types.Message):
             text = text
         )
 
+    else:
+        await message.answer(
+            text = BOT_MESSAGES.NOT_ADMIN_ACCESS,
+        )
+
+# КОМАНДА АДМИНА - вывод общей статистики
+@dp.message(Command("statistics"))
+async def show_statistics(message: types.Message):
+    user_id: int = message.from_user.id
+    if user_id in ADMIN_IDS:
+        await message.answer(
+            text = BOT_MESSAGES.MESSAGE_FROM_SHOW_STATISTIC,
+        )
+        stats = await db.statistics()
+        await message.answer(
+            text = BOT_MESSAGES.STATISTICS_TEXT.format(
+                avg_time = stats[0][0],
+                avg_score = stats[0][1],
+                count_of_questions = len(QUESTIONS)
+            ),
+        )
     else:
         await message.answer(
             text = BOT_MESSAGES.NOT_ADMIN_ACCESS,
@@ -289,9 +310,9 @@ async def check_answer(message: types.Message, state: FSMContext):
         for question_data in QUESTIONS:
             text += f"\nВопрос {question_data["id"]} - {question_data["answer"]}"
 
-    await message.answer(
-        text=text,
-    )
+        await message.answer(
+            text=text,
+        )
 
 @dp.message(F.text)
 async def echo_handler(message: types.Message, state: FSMContext):

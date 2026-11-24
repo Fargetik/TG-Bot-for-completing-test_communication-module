@@ -18,7 +18,8 @@ class BotMessages: # класс для сообщений бота
         "Привет! Я бот для прохождения теста по коммуникации."
         "Чтобы начать, зарегистрируйся через команду /reg и погнали!🤗"
     )
-    
+
+    # текст для лидертстатов
     MESSAGE_FROM_SHOW_LEADERSTATS = (
         "ТЕКСТ ДЛЯ АДМИНОВ, ДОБРО ПОЖАЛОВАТЬ,"
         "{admin_name}\n"
@@ -27,7 +28,16 @@ class BotMessages: # класс для сообщений бота
     LEADERSTATS_TEXT_UP = "Cписок Всех ЛИДЕРОВ!"
     LEADERSTAT_ONE_POS = "\n {pos} Место: {user_name} Курс: {user_course} баллов за тест: {score}"
 
-    NOT_ADMIN_ACCESS = "🤐У вас нет прав для доступа к этой команде.🤐"  # если нет доступа к функция
+    # текст для статистики
+    MESSAGE_FROM_SHOW_STATISTIC = (
+        "Вывожу полезную информацию об участников:"
+    )
+    STATISTICS_TEXT = (
+        "Среднее время прохождение теста: {avg_time} минут\n" \
+        "Cредний результат за тест: {avg_score} из {count_of_questions}"
+    )
+
+    NOT_ADMIN_ACCESS = "🤐У вас нет прав для доступа к этой команде.🤐"  # если нет доступа к функциям
 
     # cтатусы для регистрации
     USER_REG_0 = (
@@ -64,9 +74,9 @@ class BotMessages: # класс для сообщений бота
         "Спасибо за прохождение теста!\n"
         "💯Ваш счёт: {current_score} из {count_of_questions}"
     )
-    TEMP_TEST_AFTER_COMPLETE_TEST = "🏳️‍⚧️Вы уже завершили тест!🏳️‍⚧️"
+    TEMP_TEST_AFTER_COMPLETE_TEST = "Вы уже завершили тест!"
 
-    QUESTION_OUT_OF_RANGE_ERROR = "🏳️‍🌈Что-то пошло не так🏳️‍🌈"
+    QUESTION_OUT_OF_RANGE_ERROR = "Что-то пошло не так"
 
 
     
