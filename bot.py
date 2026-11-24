@@ -19,28 +19,30 @@ from bot_info.questions import QUESTIONS
 import DB_info.database as db
 import bot_info.Text_Constants as TEXT_CONST
 import reg_value_cheking as value_check
-
 load_dotenv()
+
+# некоторые константы для обращения
+USER_STATUS_TEST: str = TEXT_CONST.USER_STATUS_CONSTANT["user_status_test"]
+USER_STATUS_REG: str = TEXT_CONST.USER_STATUS_CONSTANT["user_status_reg"]
+USER_STATUS_COMPLETE: str = TEXT_CONST.USER_STATUS_CONSTANT["user_status_complete"]
+BOT_MESSAGES = TEXT_CONST.BotMessages # сообщения бота
+
+raw_admins = os.getenv("ADMIN_IDS", "")
+ADMIN_IDS = [int(x.strip()) for x in raw_admins.split(",") if x.strip()]
+
+ADMIN_ID_FOR_STATUS = ADMIN_IDS[0] # айдишник для пингование состояние
+if ADMIN_ID_FOR_STATUS is None:
+    logging.warning(BOT_MESSAGES.ADMIN_ID_NOT_FOUND)
+
 TOKEN = os.getenv("BOT_TOKEN")
 if not TOKEN:
-    raise ValueError("Токен не найден! Проверь файл .env")
+    raise ValueError(BOT_MESSAGES.TOKEN_NOT_FOUND)
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher(storage=MemoryStorage())
 
 class QuizStates(StatesGroup):
     answering = State()
-
-# некоторые константы для обращения
-USER_STATUS_TEST: str = TEXT_CONST.USER_STATUS_CONSTANT["user_status_test"]
-USER_STATUS_REG: str = TEXT_CONST.USER_STATUS_CONSTANT["user_status_reg"]
-USER_STATUS_COMPLETE: str = TEXT_CONST.USER_STATUS_CONSTANT["user_status_complete"]
-
-raw_admins = os.getenv("ADMIN_IDS", "")
-ADMIN_IDS = [int(x.strip()) for x in raw_admins.split(",") if x.strip()]
-
-ADMIN_ID_FOR_STATUS = ADMIN_IDS[0] # айдишник для пингование состояние
-BOT_MESSAGES = TEXT_CONST.BotMessages # сообщения бота
 
 
 #====================================
@@ -102,15 +104,30 @@ def get_reply_keyboard_show_answer():
 
 # ФУНКЦИЯ ДЛЯ ПИНГОВАНИЯ АДМИНА
 async def check_bot_status():
-
+    status_message = None
     while True:
         try:
             now = datetime.now().strftime("%H:%M:%S")
-            await bot.send_photo(
-                chat_id=ADMIN_ID_FOR_STATUS,
-                photo=FSInputFile("bot_info/bot_status.png"),
-                caption=BOT_MESSAGES.BOT_STATUS_INFO.format(now=now)
-            )
+            text = BOT_MESSAGES.BOT_STATUS_INFO.format(now=now)
+            if status_message is None:
+                status_message = await bot.send_photo(
+                    chat_id=ADMIN_ID_FOR_STATUS,
+                    photo=FSInputFile("bot_info/bot_status.png"),
+                    caption=text
+                )
+            else:
+                try:
+                    await bot.edit_message_caption(
+                        chat_id=ADMIN_ID_FOR_STATUS,
+                        message_id=status_message.message_id,
+                        caption=text
+                    )
+                except Exception:
+                    status_message = None # отправим новое при ошибке
+                    await bot.send_message(
+                        chat_id=ADMIN_ID_FOR_STATUS,
+                        text = BOT_MESSAGES.BOT_STATUS_MESSAGE_NOT_FOUND
+                    )
         except Exception as e:
             logging.error(BOT_MESSAGES.BOT_STATUS_ERROR.format(e=e))
 
@@ -125,7 +142,7 @@ async def check_bot_status():
 @dp.message(Command("start"), ~StateFilter(QuizStates.answering))
 async def start(message: types.Message):
     await message.answer(
-        text=BOT_MESSAGES.WELCOME, # TODO: Добавим какой-нибудь описание
+        text=BOT_MESSAGES.WELCOME,
     )
 
 # запуск теста и регистрации
@@ -216,7 +233,7 @@ async def registration(message: types.Message, state: FSMContext):
                 )
 
 # хендлер для ловли ответа
-@dp.message(F.text.lower().startswith("ответ"))
+@dp.message(F.text.regexp(r"(?i)^ответ\s*[1-4]$"))
 async def answer_cheking(message: types.Message, state: FSMContext):
 
     data = await state.get_data()
@@ -322,7 +339,8 @@ async def echo_handler(message: types.Message, state: FSMContext):
                 await db.insert_user(message.from_user.id, user_data["nickname"], user_data["course"])
 
                 await message.answer(
-                    text=BOT_MESSAGES.USER_REG_COMPLETE.format(user_data=user_data)
+                    text=BOT_MESSAGES.USER_REG_COMPLETE,
+                    parse_mode="Markdown"
                 )
             case _:
                 await message.answer(
