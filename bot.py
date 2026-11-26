@@ -25,12 +25,16 @@ load_dotenv()
 USER_STATUS_TEST: str = TEXT_CONST.USER_STATUS_CONSTANT["user_status_test"]
 USER_STATUS_REG: str = TEXT_CONST.USER_STATUS_CONSTANT["user_status_reg"]
 USER_STATUS_COMPLETE: str = TEXT_CONST.USER_STATUS_CONSTANT["user_status_complete"]
+
+USER_BUTTON_ANSWER: str = TEXT_CONST.USER_BUTTON_TEXT["user_button_answer"]
+USER_BUTTON_CHECK_ANSWERS: str = TEXT_CONST.USER_BUTTON_TEXT["user_button_check_answers"]
 BOT_MESSAGES = TEXT_CONST.BotMessages # сообщения бота
 
 raw_admins = os.getenv("ADMIN_IDS", "")
 ADMIN_IDS = [int(x.strip()) for x in raw_admins.split(",") if x.strip()]
 
 ADMIN_ID_FOR_STATUS = ADMIN_IDS[0] # айдишник для пингование состояние
+BOT_PING_STATUS_TIME = 60 # время в сек-х, когда бот пингует админа для состояния
 if ADMIN_ID_FOR_STATUS is None:
     logging.warning(BOT_MESSAGES.ADMIN_ID_NOT_FOUND)
 
@@ -62,44 +66,34 @@ async def ask_question(message: types.Message, state: FSMContext, q_index: int):
     question = QUESTIONS[q_index]
     text = question["text"]
 
+    keyboard_buttons = []
     for pos, option in enumerate(question["options"], 1):
-        text += f"\nОтвет {pos}: {option}"
+        text += f"\n{USER_BUTTON_ANSWER} {pos}: {option}"
+        keyboard_buttons.append(f"{USER_BUTTON_ANSWER} {pos}")
 
     await message.answer(
         text=text,
-        reply_markup=get_reply_keyboard()
+        reply_markup=create_reply_keyborad(keyboard_buttons)
     )
 
     await state.update_data(current_q_index=q_index)
     await state.set_state(QuizStates.answering)
 
 # ФУНКЦИЯ ДЛЯ КНОПОК НА КЛАВЕ
-def get_reply_keyboard():
-    # Создаем кнопки
-    btn_1 = KeyboardButton(text="Ответ 1")
-    btn_2 = KeyboardButton(text="Ответ 2")
-    btn_3 = KeyboardButton(text="Ответ 3")
-    btn_4 = KeyboardButton(text="Ответ 4")
-
-    # Группируем их
-    keyboard = ReplyKeyboardMarkup(
-        keyboard=[
-            [btn_1, btn_2, btn_3, btn_4]
-        ],
-        resize_keyboard=True, # Автоматически подгоняет размер кнопок под экран
-        one_time_keyboard=False # Панель не исчезнет после нажатия
-    )
-    return keyboard
-
-def get_reply_keyboard_show_answer():
-
-    btn = KeyboardButton(text="Посмотреть ответы")
+# строим клаву по выбранному набору кнопок
+def create_reply_keyborad(buttons: list[str], one_time_keyboard: bool = True):
+    try:
+        keyboard_button = [KeyboardButton(text=button) for button in buttons]
+    except Exception as e:
+        logging.error(BOT_MESSAGES.KEYBOARD_BUTTONS_ERROR.format(e=e))
+        keyboard_button = [] # вернем пустую клавиатуру
 
     keyboard = ReplyKeyboardMarkup(
-        keyboard=[[btn]],
+        keyboard=[keyboard_button],
         resize_keyboard=True,
-        one_time_keyboard=True
+        one_time_keyboard=one_time_keyboard
     )
+
     return keyboard
 
 # ФУНКЦИЯ ДЛЯ ПИНГОВАНИЯ АДМИНА
@@ -131,7 +125,7 @@ async def check_bot_status():
         except Exception as e:
             logging.error(BOT_MESSAGES.BOT_STATUS_ERROR.format(e=e))
 
-        await asyncio.sleep(60)
+        await asyncio.sleep(BOT_PING_STATUS_TIME)
 
 
 #====================================
@@ -254,7 +248,8 @@ async def registration(message: types.Message, state: FSMContext):
                 )
 
 # хендлер для ловли ответа
-@dp.message(F.text.regexp(r"(?i)^ответ\s*[1-4]$"))
+answer_pattern = rf"(?i)^{USER_BUTTON_ANSWER.lower()}\s*[1-4]$"
+@dp.message(F.text.regexp(answer_pattern))
 async def answer_cheking(message: types.Message, state: FSMContext):
 
     data = await state.get_data()
@@ -287,7 +282,7 @@ async def answer_cheking(message: types.Message, state: FSMContext):
                     current_score = current_score, 
                     count_of_questions = count_of_questions
                 ),
-                reply_markup=get_reply_keyboard_show_answer()
+                reply_markup=create_reply_keyborad([USER_BUTTON_CHECK_ANSWERS])
             )
             await db.save_result(message.from_user.id, current_score)
 
@@ -299,16 +294,19 @@ async def answer_cheking(message: types.Message, state: FSMContext):
             await state.update_data(current_q_index=current_q_index, score=current_score)
             await ask_question(message, state, current_q_index)
 
-@dp.message(F.text == "Посмотреть ответы")
+@dp.message(F.text == USER_BUTTON_CHECK_ANSWERS)
 async def check_answer(message: types.Message, state: FSMContext):
     data = await state.get_data()
     status: str = data.get("user_status", "")
 
     if status == USER_STATUS_COMPLETE:
-        text = "ОТВЕТЫ:"
+        text = BOT_MESSAGES.TEXT_SHOW_ANSWERS_TOP
 
         for question_data in QUESTIONS:
-            text += f"\nВопрос {question_data["id"]} - {question_data["answer"]}"
+            text += BOT_MESSAGES.TEXT_ONE_QUESTION_ANSWER.format(
+                pos = question_data["id"],
+                answer = question_data["answer"]
+            )
 
         await message.answer(
             text=text,

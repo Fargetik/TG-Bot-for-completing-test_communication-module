@@ -6,6 +6,11 @@ USER_STATUS_CONSTANT = {
     "user_status_reg": "Регистрация",
 }
 
+USER_BUTTON_TEXT = { # кнопки пользователся на какие-либо функции бота
+    "user_button_answer": "Ответ", # ключевое слово на ответ
+    "user_button_check_answers": "Посмотреть Ответы"
+}
+
 class BotMessages: # класс для сообщений бота
 
     BOT_STATUS_INFO = "🟢 Бот работает исправно.\nВремя на сервере: {now}" # cостояние бота
@@ -18,6 +23,8 @@ class BotMessages: # класс для сообщений бота
         "Привет! Я бот для прохождения теста по коммуникации."
         "Чтобы начать, зарегистрируйся через команду /reg и погнали!🤗"
     )
+
+    KEYBOARD_BUTTONS_ERROR = "Не удалось создать кнопки для клавиатуры, ошибка: {e}"
 
     # текст для лидертстатов
     MESSAGE_FROM_SHOW_LEADERSTATS = (
@@ -69,6 +76,12 @@ class BotMessages: # класс для сообщений бота
     TEST_NEXT_QUESTION = "🐝Переходим к следующему вопросу!🐝"
     INCORRECT_FORMAT_ANSWER = "🐸Неправильный формат ответа🐸"
     ANSWER_INDEX_OUT_OF_RANGE = "🐸Нет такого варианта ответа!🐸"
+
+    # текст для просмотра ответов
+    TEXT_SHOW_ANSWERS_TOP = "ОТВЕТЫ:"
+    TEXT_ONE_QUESTION_ANSWER = (
+        "\nВопрос {pos} - {answer}"
+    )
 
     TEST_COMPLETE = (
         "Спасибо за прохождение теста!\n"
